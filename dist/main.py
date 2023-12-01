@@ -8,6 +8,7 @@ from random import choice
 from datetime import datetime
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem, QInputDialog, QLabel, QListWidgetItem
+from PyQt5.QtCore import QDate, Qt
 
 
 warnings.filterwarnings("ignore")
@@ -410,15 +411,20 @@ class MainWidget(QMainWindow):
 
         for project in projects_today:
             row_position = self.todayEventWidget.rowCount()
-            self.todayEventWidget.insertRow(row_position)
 
             name_item = QTableWidgetItem(project[0])
-            start_finish_item = QTableWidgetItem(f"{project[1]} - {project[2]}")
 
-            self.todayEventWidget.setItem(row_position, 0, name_item)
-            self.todayEventWidget.setItem(row_position, 1, start_finish_item)
+            start_date = QDate.fromString(project[1], "dd.MM.yyyy")
+            finish_date = QDate.fromString(project[2], "dd.MM.yyyy")
 
-        self.todayEventWidget.resizeColumnToContents(1)
+            if start_date <= QDate.currentDate() <= finish_date:
+                self.todayEventWidget.insertRow(row_position)
+                start_finish_item = QTableWidgetItem(f"{project[1]} - {project[2]}")
+
+                self.todayEventWidget.setItem(row_position, 0, name_item)
+                self.todayEventWidget.setItem(row_position, 1, start_finish_item)
+
+                self.todayEventWidget.resizeColumnToContents(1)
 
         con.close()
 
