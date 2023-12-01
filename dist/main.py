@@ -198,7 +198,7 @@ project_template = '''<?xml version="1.0" encoding="UTF-8"?>
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>813</width>
     <height>600</height>
    </rect>
   </property>
@@ -211,8 +211,8 @@ project_template = '''<?xml version="1.0" encoding="UTF-8"?>
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>781</width>
-      <height>521</height>
+      <width>795</width>
+      <height>531</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -231,6 +231,16 @@ project_template = '''<?xml version="1.0" encoding="UTF-8"?>
       </layout>
      </item>
      <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QCalendarWidget" name="prevWidget"/>
+       </item>
+       <item>
+        <widget class="QCalendarWidget" name="afterWidget"/>
+       </item>
+      </layout>
+     </item>
+     <item>
       <widget class="QTextEdit" name="textEdit"/>
      </item>
     </layout>
@@ -241,7 +251,7 @@ project_template = '''<?xml version="1.0" encoding="UTF-8"?>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>813</width>
      <height>26</height>
     </rect>
    </property>
@@ -376,6 +386,7 @@ class MainWidget(QMainWindow):
 
         self.projects()
         self.day()
+        self.motivation()
 
     def day(self):
         con = sqlite3.connect('data/gtd_bd')
@@ -383,6 +394,8 @@ class MainWidget(QMainWindow):
 
         result = list(filter(lambda x: x[1] == datetime.now().strftime("%d.%m.%Y"),
                              cur.execute('''SELECT name, date, time FROM inbox''').fetchall()))
+
+        projects_today = cur.execute('''SELECT project, start, finish FROM projects''').fetchall()
 
         self.todayEventWidget.setColumnCount(3)
         self.todayEventWidget.setHorizontalHeaderLabels(['Название', 'Дата', 'Время'])
@@ -394,6 +407,20 @@ class MainWidget(QMainWindow):
             self.todayEventWidget.setItem(row_position, 0, QTableWidgetItem(res[0]))
             self.todayEventWidget.setItem(row_position, 1, QTableWidgetItem(res[1]))
             self.todayEventWidget.setItem(row_position, 2, QTableWidgetItem(res[2]))
+
+        for project in projects_today:
+            row_position = self.todayEventWidget.rowCount()
+            self.todayEventWidget.insertRow(row_position)
+
+            name_item = QTableWidgetItem(project[0])
+            start_finish_item = QTableWidgetItem(f"{project[1]} - {project[2]}")
+
+            self.todayEventWidget.setItem(row_position, 0, name_item)
+            self.todayEventWidget.setItem(row_position, 1, start_finish_item)
+
+        self.todayEventWidget.resizeColumnToContents(1)
+
+        con.close()
 
     def projects(self):
         self.project_clear()
@@ -427,15 +454,25 @@ class ProjectWidget(QMainWindow):
         self.addProjectButton.clicked.connect(self.create_project)
 
     def create_project(self):
-        con = sqlite3.connect('/data/gtd_bd')
+        con = sqlite3.connect('data/gtd_bd')
         cur = con.cursor()
 
-        data = (self.titleEdit.text(), self.textEdit.toPlainText())
+        start_date = self.prevWidget.selectedDate()
+        finish_date = self.afterWidget.selectedDate()
 
-        cur.execute("INSERT INTO projects(project, description) VALUES (?, ?)", data)
+        if start_date.daysTo(finish_date) < 0:
+            self.statusbar.showMessage("Ошибка: Дата начала должна быть раньше или совпадать с датой окончания", 5000)
+            return
+
+        start_date_str = start_date.toString("dd.MM.yyyy")
+        finish_date_str = finish_date.toString("dd.MM.yyyy")
+        data = (self.titleEdit.text(), self.textEdit.toPlainText(), start_date_str, finish_date_str)
+
+        cur.execute("INSERT INTO projects(project, description, start, finish) VALUES (?, ?, ?, ?)", data)
 
         con.commit()
         con.close()
+        self.close()
 
 
 if __name__ == '__main__':
